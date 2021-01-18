@@ -1,0 +1,49 @@
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+
+name: Create ZIP file
+
+on:
+    release:
+        types: [ created ]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Get the version
+                id: get_version
+                run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
+            -   name: echo release
+                run: echo $RELEASE
+                env:
+                    RELEASE: ${{ steps.get_version.outputs.VERSION }}
+
+            -   name: Checkout
+                uses: actions/checkout@v2
+
+            -   name: Create plugin directory
+                working-directory: .
+                run: |
+                    mkdir -p /tmp/plugin/KoalityShopwarePlugin
+                    mv * /tmp/plugin/KoalityShopwarePlugin
+
+            -   name: Remove GIT files
+                working-directory: /tmp/plugin
+                run: |
+                    rm -rf KoalityShopwarePlugin/.git KoalityShopwarePlugin/.github
+
+            -   name: Create ZIP file
+                working-directory: /tmp/plugin
+                run: |
+                    zip -r KoalityShopwarePlugin.zip .
+
+            -   name: Upload binaries to release
+                uses: svenstaro/upload-release-action@v2
+                with:
+                    repo_token: ${{ secrets.GITHUB_TOKEN }}
+                    file: /tmp/plugin/KoalityShopwarePlugin.zip
+                    asset_name: ${{ matrix.asset_name }}
+                    tag: ${{ github.ref }}
+
